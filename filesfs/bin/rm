@@ -15,7 +15,6 @@ def rm():
     file_path = current_dir / filename
     
     try:
-        # Проверяем, что путь не выходит за пределы filesfs
         if not str(file_path.resolve()).startswith(str(root)):
             print(f"rm: access denied: {filename}", file=sys.stderr)
             return 1

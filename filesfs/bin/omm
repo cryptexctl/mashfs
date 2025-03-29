@@ -72,12 +72,10 @@ def apply_theme(theme_name):
         
     show_loading_animation()
     
-    # Сохраняем текущую тему
     current_theme_file = root / 'etc' / 'omm' / 'current_theme'
     current_theme_file.parent.mkdir(parents=True, exist_ok=True)
     current_theme_file.write_text(theme_name)
     
-    # Обновляем переменную окружения
     os.environ['MASHFS_THEME'] = theme_name
     
     console.print(f"[green]Theme {theme_name} applied successfully![/green]")

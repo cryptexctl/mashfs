@@ -2,7 +2,7 @@
 
 Что-то вроде фс на питоне
 
-![MashFS Demo](assets-gh/balo.mp4)
+![MashFS Demo](assets-gh/screenshot.png)
 
 ## Структура проекта
 

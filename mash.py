@@ -12,9 +12,28 @@ from tqdm import tqdm
 class MashShell:
     def __init__(self):
         self.root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
-        self.current_dir = Path(os.environ.get('MASHFS_CWD', str(self.root))).absolute()
         self.user = 'mash'
         self.hostname = 'hardmash'
+        
+        if self.user == 'root':
+            self.current_dir = self.root / 'root'
+        else:
+            self.current_dir = self.root / 'home' / self.user
+            
+        if not self.current_dir.exists():
+            self.current_dir.mkdir(parents=True, exist_ok=True)
+            
+        cwd_env = os.environ.get('MASHFS_CWD')
+        if cwd_env:
+            try:
+                path = Path(cwd_env).absolute()
+                if path.exists() and path.is_dir() and str(path).startswith(str(self.root)):
+                    self.current_dir = path
+            except:
+                pass
+                
+        os.environ['MASHFS_CWD'] = str(self.current_dir)
+        
         self.commands = {
             'cd': self._cd,
             'ls': self._ls,
@@ -40,8 +59,12 @@ class MashShell:
     def _setup_readline(self):
         readline.parse_and_bind('tab: complete')
         readline.set_completer(self._completer)
-        readline.set_startup_hook(lambda: readline.insert_text(''))
-        readline.set_pre_input_hook(lambda: readline.clear_history())
+        readline.parse_and_bind('"\e[A": history-search-backward')
+        readline.parse_and_bind('"\e[B": history-search-forward')
+        readline.parse_and_bind('"\e[C": forward-char')
+        readline.parse_and_bind('"\e[D": backward-char')
+        readline.parse_and_bind('"\C-h": backward-delete-char')
+        readline.parse_and_bind('"\C-?": backward-delete-char')
 
     def _completer(self, text, state):
         if state == 0:
@@ -99,10 +122,18 @@ class MashShell:
         print(self.theme['info'] % "Type 'help' for available commands")
         print(self.theme['info'] % "Type 'exit' to quit")
         print(self.theme['info'] % "Use Tab for command and path completion")
+        print(self.theme['info'] % f"Current location: {str(self.current_dir.relative_to(self.root))}")
 
     def _cd(self, args: List[str]) -> None:
         if not args:
-            self.current_dir = self.root
+            if self.user == 'root':
+                self.current_dir = self.root / 'root'
+            else:
+                self.current_dir = self.root / 'home' / self.user
+                if not self.current_dir.exists():
+                    self.current_dir.mkdir(parents=True, exist_ok=True)
+                    print(self.theme['info'] % f"Created home directory for {self.user}")
+            os.environ['MASHFS_CWD'] = str(self.current_dir)
             return
             
         target = args[0]
@@ -211,6 +242,16 @@ class MashShell:
             if self._authenticate(username, password):
                 self.user = username
                 print(self.theme['success'] % f"Switched to user: {username}")
+                
+                if self.user == 'root':
+                    self.current_dir = self.root / 'root'
+                else:
+                    self.current_dir = self.root / 'home' / self.user
+                    
+                if not self.current_dir.exists():
+                    self.current_dir.mkdir(parents=True, exist_ok=True)
+                    
+                os.environ['MASHFS_CWD'] = str(self.current_dir)
             else:
                 print(self.theme['error'] % "Authentication failed")
         except Exception as e:
@@ -219,13 +260,45 @@ class MashShell:
     def _sudo(self, args: List[str]) -> None:
         if not args:
             print(self.theme['error'] % "Usage: sudo <command>")
+            print(self.theme['info'] % "Use 'sudo -s' or 'sudo -i' for root shell")
             return
             
         try:
+            if args[0] in ['-s', '-i']:
+                password = getpass.getpass("Password: ")
+                if self._authenticate('root', password):
+                    print(self.theme['success'] % "Root shell activated")
+                    self.user = 'root'
+                    if args[0] == '-i':
+                        self.current_dir = self.root / 'root'
+                    return
+                else:
+                    print(self.theme['error'] % "Authentication failed")
+                    return
+                    
             password = getpass.getpass("Password: ")
             if self._authenticate('root', password):
-                cmd = ' '.join(args)
-                os.system(f"sudo {cmd}")
+                old_user = self.user
+                self.user = 'root'
+                
+                command = args[0]
+                command_args = args[1:]
+                
+                if command in self.commands:
+                    self.commands[command](command_args)
+                else:
+                    cmd_path = self.root / 'bin' / command
+                    if not cmd_path.exists() or not cmd_path.is_file() or not os.access(cmd_path, os.X_OK):
+                        print(self.theme['error'] % f"Command not found: {command}")
+                    else:
+                        os.environ['SUDO_USER'] = old_user
+                        os.environ['USER'] = 'root'
+                        cmd_str = f"python3 {cmd_path} {' '.join(command_args)}"
+                        os.system(cmd_str)
+                        os.environ['USER'] = old_user
+                        del os.environ['SUDO_USER']
+                    
+                self.user = old_user
             else:
                 print(self.theme['error'] % "Authentication failed")
         except Exception as e:
@@ -344,11 +417,7 @@ class MashShell:
             return False
 
     def _verify_password(self, password: str, stored_hash: str) -> bool:
-        import hashlib
-        salt = stored_hash.split('$')[2]
-        hash_obj = hashlib.sha256()
-        hash_obj.update((password + salt).encode())
-        return hash_obj.hexdigest() == stored_hash.split('$')[3]
+        return password == stored_hash.strip()
 
     def _get_user_info(self, username: str) -> Optional[Dict]:
         try:
@@ -493,18 +562,20 @@ class MashShell:
         os.system(cmd_str)
 
     def run(self) -> None:
+        history = []
         while True:
             try:
                 prompt = self.theme['prompt'] % (self.user, self.hostname, str(self.current_dir.relative_to(self.root)))
-                readline.set_startup_hook(lambda: readline.insert_text(''))
-                readline.set_pre_input_hook(lambda: readline.clear_history())
                 cmd = input(prompt).strip()
-                readline.set_startup_hook()
-                readline.set_pre_input_hook(None)
                 
                 if not cmd:
                     continue
                     
+                if cmd not in history:
+                    history.append(cmd)
+                    if len(history) > 1000:
+                        history.pop(0)
+                
                 parts = cmd.split()
                 command = parts[0]
                 args = parts[1:]

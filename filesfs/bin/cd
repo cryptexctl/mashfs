@@ -6,7 +6,6 @@ from pathlib import Path
 def cd():
     """Change directory command"""
     if len(sys.argv) < 2:
-        # Если аргументов нет, возвращаемся в корневую директорию
         print("/")
         return 0
         
@@ -14,7 +13,6 @@ def cd():
     root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
     current_dir = Path(os.environ.get('MASHFS_CWD', str(root))).absolute()
     
-    # Обработка специальных путей
     if path == '..':
         if current_dir != root:
             new_dir = current_dir.parent
@@ -28,7 +26,6 @@ def cd():
         print("")
         return 0
         
-    # Проверяем, что путь не выходит за пределы filesfs
     target = current_dir / path
     try:
         target = target.resolve()
