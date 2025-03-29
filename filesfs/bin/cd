@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+import os
+import sys
+from pathlib import Path
+
+def cd():
+    """Change directory command"""
+    if len(sys.argv) < 2:
+        # Если аргументов нет, возвращаемся в корневую директорию
+        print("/")
+        return 0
+        
+    path = sys.argv[1]
+    root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
+    current_dir = Path(os.environ.get('MASHFS_CWD', str(root))).absolute()
+    
+    # Обработка специальных путей
+    if path == '..':
+        if current_dir != root:
+            new_dir = current_dir.parent
+            if str(new_dir).startswith(str(root)):
+                print(str(new_dir.relative_to(root)))
+                return 0
+    elif path == '.':
+        print(str(current_dir.relative_to(root)))
+        return 0
+    elif path == '/':
+        print("")
+        return 0
+        
+    # Проверяем, что путь не выходит за пределы filesfs
+    target = current_dir / path
+    try:
+        target = target.resolve()
+        if not str(target).startswith(str(root)):
+            print(f"cd: access denied: {path}", file=sys.stderr)
+            return 1
+            
+        if target.is_dir():
+            print(str(target.relative_to(root)))
+            return 0
+        else:
+            print(f"cd: no such directory: {path}", file=sys.stderr)
+            return 1
+    except Exception as e:
+        print(f"cd: {e}", file=sys.stderr)
+        return 1
+
+if __name__ == "__main__":
+    sys.exit(cd()) 

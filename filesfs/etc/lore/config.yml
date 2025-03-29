@@ -1,0 +1,70 @@
+system:
+  hostname: hardmash
+  motd: Welcome to MashFS Shell! 🚀
+  theme: cyberpunk
+  shell_prompt: "[bold cyan]{user}@{hostname}[/bold cyan]$ "
+
+users:
+  root:
+    uid: 0
+    gid: 0
+    home: /root
+    shell: /bin/mash
+    password: mash
+    groups: [root]
+    active: true
+
+  mash:
+    uid: 1000
+    gid: 1000
+    home: /home/mash
+    shell: /bin/mash
+    password: mash
+    groups: [mash]
+    active: true
+
+groups:
+  root:
+    gid: 0
+    members: [root]
+    active: true
+
+  mash:
+    gid: 1000
+    members: [mash]
+    active: true
+
+packages:
+  enabled:
+    - oh_my_mash
+    - core-utils
+    - fastfetch
+    - neofetch
+    - zsh
+    - oh-my-zsh
+  active: true
+
+themes:
+  cyberpunk:
+    colors:
+      primary: "#00ff00"
+      secondary: "#ff00ff"
+      background: "#000000"
+      text: "#ffffff"
+    active: true
+
+  neon:
+    colors:
+      primary: "#00ffff"
+      secondary: "#ff00ff"
+      background: "#000000"
+      text: "#ffffff"
+    active: true
+
+  minimal:
+    colors:
+      primary: "#ffffff"
+      secondary: "#cccccc"
+      background: "#000000"
+      text: "#ffffff"
+    active: true 

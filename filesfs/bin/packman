@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+import os
+import sys
+from pathlib import Path
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+import json
+
+root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
+sys.path.append(str(root))
+
+from opt.packman.lib.package_manager import PackageManager
+
+console = Console()
+
+def print_usage():
+    usage = """
+[bold cyan]MashFS Package Manager[/bold cyan]
+
+[bold]Usage:[/bold] packman <command> [package_name]
+
+[bold]Commands:[/bold]
+  add     - Add and enable a package
+  remove  - Remove a package completely
+  install - Install a package
+  enable  - Enable a disabled package
+  disable - Disable an enabled package
+  list    - List all available packages
+  info    - Show package information
+
+[bold]Examples:[/bold]
+  packman add core-utils
+  packman remove zsh
+  packman install oh-my-zsh
+  packman enable fastfetch
+  packman disable neofetch
+  packman list
+  packman info zsh
+"""
+    console.print(Panel(usage, title="MashFS Package Manager", border_style="cyan"))
+
+def main():
+    if len(sys.argv) < 2:
+        print_usage()
+        return 1
+        
+    command = sys.argv[1]
+    package_name = sys.argv[2] if len(sys.argv) > 2 else None
+    
+    packman = PackageManager()
+    
+    if command == 'add':
+        if not package_name:
+            console.print("[red]Error: package name required[/red]")
+            return 1
+        return packman.add(package_name)
+    elif command == 'remove':
+        if not package_name:
+            console.print("[red]Error: package name required[/red]")
+            return 1
+        return packman.remove(package_name)
+    elif command == 'install':
+        if not package_name:
+            console.print("[red]Error: package name required[/red]")
+            return 1
+        return packman.install(package_name)
+    elif command == 'enable':
+        if not package_name:
+            console.print("[red]Error: package name required[/red]")
+            return 1
+        return packman.enable(package_name)
+    elif command == 'disable':
+        if not package_name:
+            console.print("[red]Error: package name required[/red]")
+            return 1
+        return packman.disable(package_name)
+    elif command == 'list':
+        root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
+        packages_dir = root / 'opt' / 'packman' / 'packages'
+        
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Package")
+        table.add_column("Version")
+        table.add_column("Description")
+        table.add_column("Status")
+        
+        for package_dir in packages_dir.iterdir():
+            if package_dir.is_dir():
+                info_file = package_dir / 'info.json'
+                if info_file.exists():
+                    with open(info_file) as f:
+                        info = json.load(f)
+                    status = "[green]Enabled[/green]" if (root / 'opt' / 'packman' / 'enabled' / package_dir.name).exists() else "[yellow]Disabled[/yellow]"
+                    table.add_row(
+                        info['name'],
+                        info['version'],
+                        info['description'],
+                        status
+                    )
+                    
+        console.print(table)
+        return 0
+    elif command == 'info':
+        if not package_name:
+            console.print("[red]Error: package name required[/red]")
+            return 1
+            
+        package_info = packman._get_package_info(package_name)
+        if not package_info:
+            console.print(f"[red]Package not found: {package_name}[/red]")
+            return 1
+            
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Field")
+        table.add_column("Value")
+        
+        for key, value in package_info.items():
+            if isinstance(value, list):
+                value = ', '.join(value)
+            table.add_row(key, str(value))
+            
+        console.print(table)
+        return 0
+    else:
+        console.print(f"[red]Unknown command: {command}[/red]")
+        return 1
+
+if __name__ == "__main__":
+    sys.exit(main()) 

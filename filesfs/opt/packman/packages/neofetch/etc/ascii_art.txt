@@ -1,0 +1,13 @@
+    .-/+oossssoo+/-.               mashfs@mashfs
+   `:+ssssssssssssssssss+:`           ---------------
+ -+ssssssssssssssssssyyssss+-           OS: MashFS
+.ossssssssssssssssssdMMMNysssso.         Host: Virtual Machine
+/ssssssssssshdmmNNmmyNMMMMhssssss/        Kernel: 1.0.0
++ssssssssshmydMMMMMMMNddddysssssss+       Uptime: 1 day
+/sssssssshNMMMyhhyyyyhmNMMMNhssssss/      Packages: 42
+.ssssssssdMMMNhsssssssssshNMMMdssssss.    Shell: mashfs
+ -osssssssyyss+sssssssssssssyyyssssss-    Resolution: 1920x1080
+  -+ssssssssssssssssssssssssssssssss+-    DE: MashFS Desktop
+   `:+ssssssssssssssssssssssssssss+:`     WM: MashFS Window Manager
+      .-/+oossssoo+/-.                     CPU: Virtual CPU
+                                          Memory: 2048MB / 4096MB 
