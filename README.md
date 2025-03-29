@@ -2,7 +2,7 @@
 
 Что-то вроде фс на питоне
 
-![balo](https://github.com/cryptexctl/mashfs/raw/refs/heads/main/assets-gh/balo.mp4)
+![MashFS Demo](assets-gh/balo.mp4)
 
 ## Структура проекта
 
