@@ -13,10 +13,10 @@
 
 ## Пакетый менджер
 
-packman add <package> - включает (и устанавливает если не было этого пакета) пакет в шелле
-packman rm <packge> - выключает пакет в шелле
-packman remove <package> - удаляет и его не включить
-packman install <package> - установить
+- `packman add <package>` - включает (и устанавливает если не было этого пакета) пакет в шелле
+- `packman rm <packge>` - выключает пакет в шелле
+- `packman remove <package>` - удаляет и его не включить
+- `packman install <package>` - установить
 
 ## Запуск
 
@@ -24,6 +24,7 @@ packman install <package> - установить
 python3 mash.py
 ```
 
-### P.S. Пароли
+### Пароли по умолчанию
+```
 mash:mash123
 root:root123
