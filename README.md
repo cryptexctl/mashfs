@@ -2,7 +2,7 @@
 
 Что-то вроде фс на питоне
 
-![MashFS Demo](https://asciinema.org/a/BgK8iO0YIxlYceF6edKe5aAsZ?t=7)
+![MashFS Demo](https://asciinema.org/a/710587)
 
 ## Структура проекта
 
