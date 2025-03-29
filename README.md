@@ -2,7 +2,7 @@
 
 Что-то вроде фс на питоне
 
-![balo](assets-gh/balo.mp4)
+![balo](https://0x0.st/8enS.mp4)
 
 ## Структура проекта
 
