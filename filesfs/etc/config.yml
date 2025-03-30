@@ -1,6 +1,6 @@
 system:
   name: MashFS
-  version: 1.0.0
+  version: 1.0.1-alpha
   description: Lightweight virtual filesystem for educational purposes
   
 shell:

@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 from datetime import datetime
 
-VERSION = "1.0.0"
+VERSION = "1.0.1-alpha"
 REPO_URL = "https://github.com/cryptexctl/mashfs.git"
 DEFAULT_BRANCHES = ["main", "stable", "beta", "dev", "experimental"]
 
