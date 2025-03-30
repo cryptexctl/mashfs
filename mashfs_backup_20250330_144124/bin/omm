@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+import os
+import sys
+import time
+from pathlib import Path
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
+from rich.table import Table
+from pyfiglet import Figlet
+
+console = Console()
+
+def load_theme_colors():
+    colors = {}
+    theme = os.environ.get('MASHFS_THEME', 'cyberpunk')
+    theme_file = Path(os.environ.get('MASHFS_ROOT', 'filesfs')) / 'etc' / 'omm' / 'themes' / f"{theme}.theme"
+    
+    if theme_file.exists():
+        with open(theme_file) as f:
+            for line in f:
+                if '=' in line:
+                    key, value = line.strip().split('=')
+                    colors[key.strip()] = value.strip()
+    return colors
+
+def show_welcome():
+    console.clear()
+    console.print("\n")
+    
+    f = Figlet(font='slant')
+    console.print(Panel(f.renderText("MASH"), style="bold magenta"))
+    
+    welcome_text = "Welcome to Oh My Mash! 🚀"
+    for char in welcome_text:
+        console.print(f"[cyan]{char}[/cyan]", end='', flush=True)
+        time.sleep(0.05)
+    console.print("\n")
+
+def show_theme_preview(theme_name):
+    colors = load_theme_colors()
+    preview = Panel(
+        f"[{colors['prompt']}]user@mash[/{colors['prompt']}] "
+        f"[{colors['path']}]~/projects[/{colors['path']}] "
+        f"[{colors['git']}]git:(main)[/{colors['git']}] "
+        f"[{colors['success']}]✓[/{colors['success']}]",
+        title=f"Theme: {theme_name}",
+        border_style=colors['border']
+    )
+    console.print(preview)
+
+def show_loading_animation():
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        console=console
+    ) as progress:
+        task = progress.add_task("Loading theme...", total=100)
+        for i in range(100):
+            time.sleep(0.02)
+            progress.update(task, advance=1)
+
+def apply_theme(theme_name):
+    root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
+    theme_file = root / 'etc' / 'omm' / 'themes' / f"{theme_name}.theme"
+    
+    if not theme_file.exists():
+        console.print(f"[red]Theme {theme_name} not found[/red]")
+        return False
+        
+    show_loading_animation()
+    
+    current_theme_file = root / 'etc' / 'omm' / 'current_theme'
+    current_theme_file.parent.mkdir(parents=True, exist_ok=True)
+    current_theme_file.write_text(theme_name)
+    
+    os.environ['MASHFS_THEME'] = theme_name
+    
+    console.print(f"[green]Theme {theme_name} applied successfully![/green]")
+    return True
+
+def list_themes():
+    root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
+    themes_dir = root / 'etc' / 'omm' / 'themes'
+    current_theme = os.environ.get('MASHFS_THEME', 'cyberpunk')
+    
+    themes = []
+    for theme_file in themes_dir.glob("*.theme"):
+        themes.append(theme_file.stem)
+        
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column("Theme")
+    table.add_column("Status")
+    
+    for theme in themes:
+        status = "[green]Active[/green]" if theme == current_theme else "[dim]Inactive[/dim]"
+        table.add_row(theme, status)
+        
+    console.print(table)
+
+def show_help():
+    help_text = """
+[bold cyan]Oh My Mash Commands[/bold cyan]
+
+  [bold]omm theme <name>[/bold]    - Apply a theme
+  [bold]omm list[/bold]           - List available themes
+  [bold]omm preview <name>[/bold] - Preview a theme
+  [bold]omm update[/bold]         - Update Oh My Mash
+  [bold]omm help[/bold]           - Show this help message
+"""
+    console.print(Panel(help_text, title="Oh My Mash Help", border_style="cyan"))
+
+def main():
+    if len(sys.argv) < 2:
+        show_welcome()
+        show_help()
+        return 0
+        
+    command = sys.argv[1]
+    
+    if command == 'theme':
+        if len(sys.argv) < 3:
+            console.print("[red]Error: theme name required[/red]")
+            return 1
+        theme_name = sys.argv[2]
+        return 0 if apply_theme(theme_name) else 1
+    elif command == 'list':
+        list_themes()
+        return 0
+    elif command == 'preview':
+        if len(sys.argv) < 3:
+            console.print("[red]Error: theme name required[/red]")
+            return 1
+        theme_name = sys.argv[2]
+        show_theme_preview(theme_name)
+        return 0
+    elif command == 'update':
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            console=console
+        ) as progress:
+            task = progress.add_task("Updating Oh My Mash...", total=100)
+            for i in range(100):
+                time.sleep(0.02)
+                progress.update(task, advance=1)
+        console.print("[green]Oh My Mash updated successfully![/green]")
+        return 0
+    elif command == 'help':
+        show_help()
+        return 0
+    else:
+        console.print(f"[red]Unknown command: {command}[/red]")
+        return 1
+
+if __name__ == "__main__":
+    sys.exit(main()) 

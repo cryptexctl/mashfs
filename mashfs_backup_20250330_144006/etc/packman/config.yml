@@ -1,0 +1,26 @@
+# Packman Configuration
+version: 1.0
+
+# General settings
+auto_update: true
+update_interval: 24h
+
+# Package management
+default_repo: "core"
+repos:
+  core:
+    url: https://github.com/yourusername/mashfs-packages
+    enabled: true
+    priority: 1
+
+# Package filters
+exclude_packages: []
+include_packages: []
+
+# User settings
+default_user: "root"
+user_home: "/home"
+
+# Security
+require_auth: true
+allow_remote_repos: false 

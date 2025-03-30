@@ -1,0 +1,15 @@
+{
+    "name": "neofetch",
+    "version": "1.0.0",
+    "description": "System information tool with ASCII art",
+    "author": "MashFS Team",
+    "dependencies": [],
+    "files": [
+        "bin/neofetch",
+        "etc/ascii_art.txt"
+    ],
+    "scripts": {
+        "pre_install": "echo 'Installing neofetch...'",
+        "post_install": "echo 'Neofetch installed successfully'"
+    }
+} 

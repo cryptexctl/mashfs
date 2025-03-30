@@ -1,0 +1,17 @@
+{
+    "name": "example",
+    "version": "1.0.0",
+    "description": "Example package for testing",
+    "author": "MashFS Team",
+    "dependencies": [],
+    "files": [
+        "bin/example",
+        "etc/example.conf"
+    ],
+    "scripts": {
+        "pre_install": "echo 'Pre-install script'",
+        "post_install": "echo 'Post-install script'",
+        "pre_remove": "echo 'Pre-remove script'",
+        "post_remove": "echo 'Post-remove script'"
+    }
+} 

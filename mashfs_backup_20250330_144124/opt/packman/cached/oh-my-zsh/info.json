@@ -1,0 +1,22 @@
+{
+    "name": "oh-my-zsh",
+    "version": "1.0.0",
+    "description": "Oh My Zsh - framework for managing Zsh configuration",
+    "author": "MashFS Team",
+    "dependencies": [],
+    "files": [
+        "etc/oh-my-zsh/",
+        "etc/oh-my-zsh/themes/",
+        "etc/oh-my-zsh/plugins/",
+        "etc/oh-my-zsh/custom/",
+        "etc/oh-my-zsh/tools/",
+        "etc/oh-my-zsh/lib/",
+        "etc/oh-my-zsh/README.md"
+    ],
+    "scripts": {
+        "pre_install": "echo 'Installing Oh My Zsh...'",
+        "post_install": "echo 'Oh My Zsh installed successfully'",
+        "pre_remove": "echo 'Removing Oh My Zsh...'",
+        "post_remove": "echo 'Oh My Zsh removed successfully'"
+    }
+} 

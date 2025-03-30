@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+import os
+import sys
+import json
+import random
+from pathlib import Path
+
+THEMES = {
+    "cyberpunk": {
+        "prompt": "\x1b[1;38;5;207m%s\x1b[0m@\x1b[1;38;5;39m%s\x1b[0m:\x1b[1;38;5;226m%s\x1b[0m$ ",
+        "error": "\x1b[1;38;5;196m%s\x1b[0m",
+        "success": "\x1b[1;38;5;46m%s\x1b[0m",
+        "info": "\x1b[1;38;5;81m%s\x1b[0m",
+        "warning": "\x1b[1;38;5;220m%s\x1b[0m"
+    },
+    "neon": {
+        "prompt": "\x1b[1;38;5;46m%s\x1b[0m@\x1b[1;38;5;201m%s\x1b[0m:\x1b[1;38;5;51m%s\x1b[0m$ ",
+        "error": "\x1b[1;38;5;196m%s\x1b[0m",
+        "success": "\x1b[1;38;5;118m%s\x1b[0m",
+        "info": "\x1b[1;38;5;87m%s\x1b[0m",
+        "warning": "\x1b[1;38;5;214m%s\x1b[0m"
+    },
+    "retro": {
+        "prompt": "\x1b[1;33m%s\x1b[0m@\x1b[1;32m%s\x1b[0m:\x1b[1;36m%s\x1b[0m$ ",
+        "error": "\x1b[1;31m%s\x1b[0m",
+        "success": "\x1b[1;32m%s\x1b[0m",
+        "info": "\x1b[1;36m%s\x1b[0m",
+        "warning": "\x1b[1;33m%s\x1b[0m"
+    },
+    "minimal": {
+        "prompt": "\x1b[1;37m%s\x1b[0m@\x1b[1;37m%s\x1b[0m:\x1b[1;37m%s\x1b[0m$ ",
+        "error": "\x1b[1;37m%s\x1b[0m",
+        "success": "\x1b[1;37m%s\x1b[0m",
+        "info": "\x1b[1;37m%s\x1b[0m",
+        "warning": "\x1b[1;37m%s\x1b[0m"
+    },
+    "midnight": {
+        "prompt": "\x1b[1;38;5;27m%s\x1b[0m@\x1b[1;38;5;20m%s\x1b[0m:\x1b[1;38;5;69m%s\x1b[0m$ ",
+        "error": "\x1b[1;38;5;160m%s\x1b[0m",
+        "success": "\x1b[1;38;5;77m%s\x1b[0m",
+        "info": "\x1b[1;38;5;75m%s\x1b[0m",
+        "warning": "\x1b[1;38;5;178m%s\x1b[0m"
+    }
+}
+
+def load_theme_colors(theme_name):
+    if theme_name in THEMES:
+        return THEMES[theme_name]
+    else:
+        return THEMES["retro"]
+
+def show_welcome_message():
+    quotes = [
+        "Oh My Mash - Сделайте вашу оболочку красивой!",
+        "Жизнь слишком коротка для скучного терминала!",
+        "Стиль - это способ сказать, кто вы есть, не произнося ни слова.",
+        "Великолепный интерфейс делает работу приятнее.",
+        "В мире полном терминалов, будь тем, кто выделяется."
+    ]
+    
+    print(f"\n\x1b[1;38;5;208m{random.choice(quotes)}\x1b[0m\n")
+
+def apply_theme(theme_name):
+    root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
+    themes_dir = root / 'opt' / 'packman' / 'packages' / 'oh_my_mash' / 'themes'
+    themes_dir.mkdir(exist_ok=True, parents=True)
+    
+    if theme_name not in THEMES:
+        print(f"Тема '{theme_name}' не найдена")
+        return False
+    
+    theme_file = themes_dir / f"{theme_name}.theme"
+    with open(theme_file, 'w') as f:
+        json.dump(THEMES[theme_name], f, indent=2)
+    
+    active_theme = themes_dir / "active.theme"
+    if active_theme.exists():
+        active_theme.unlink()
+    
+    with open(root / 'etc' / 'theme.yml', 'w') as f:
+        f.write(f"name: {theme_name}\n")
+        f.write(f"description: Oh My Mash {theme_name} theme\n")
+        f.write("colors:\n")
+        for key, value in THEMES[theme_name].items():
+            yaml_value = value.replace('\x1b', '\\033')
+            f.write(f"  {key}: \"{yaml_value}\"\n")
+    
+    print(f"Тема '{theme_name}' успешно применена!")
+    return True
+
+def list_themes():
+    print("Доступные темы:")
+    for theme in THEMES.keys():
+        print(f"  - {theme}")
+
+def show_help():
+    print("Oh My Mash - Менеджер тем для MashFS")
+    print("\nИспользование: omm <команда> [параметры]")
+    print("\nДоступные команды:")
+    print("  load <theme>  - Загрузить и применить тему")
+    print("  list          - Показать список доступных тем")
+    print("  help          - Показать эту справку")
+    print("\nПримеры:")
+    print("  omm load cyberpunk  - Применить тему Cyberpunk")
+    print("  omm list            - Показать все доступные темы")
+
+def main():
+    if len(sys.argv) < 2:
+        show_welcome_message()
+        list_themes()
+        return
+    
+    command = sys.argv[1]
+    
+    if command == "load":
+        if len(sys.argv) < 3:
+            print("Необходимо указать имя темы")
+            print("Использование: omm load <theme>")
+            return
+        
+        theme_name = sys.argv[2]
+        apply_theme(theme_name)
+    
+    elif command == "list":
+        list_themes()
+    
+    elif command == "help":
+        show_help()
+    
+    else:
+        print(f"Неизвестная команда: {command}")
+        print("Используйте 'omm help' для просмотра доступных команд")
+
+if __name__ == "__main__":
+    main() 

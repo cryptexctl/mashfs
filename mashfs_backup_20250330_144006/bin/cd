@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+import os
+import sys
+from pathlib import Path
+
+def main():
+    root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
+    current_dir = Path(os.environ.get('MASHFS_CWD', 'home/mash'))
+    
+    argc = len(sys.argv)
+    if argc < 2:
+        home_dir = Path(f"home/{os.environ.get('USER', 'mash')}")
+        if (root / home_dir).exists():
+            os.environ['MASHFS_CWD'] = str(home_dir)
+            print(f"Changed directory to {home_dir}")
+        return 0
+        
+    path = sys.argv[1]
+    
+    if path == '-':
+        print("cd: OLDPWD not set", file=sys.stderr)
+        return 1
+        
+    new_path = current_dir
+    if path.startswith('/'):
+        new_path = Path(path[1:])
+    else:
+        for part in path.split('/'):
+            if part == '':
+                continue
+            elif part == '.':
+                continue
+            elif part == '..':
+                if new_path != Path('.'):
+                    new_path = new_path.parent
+            else:
+                new_path = new_path / part
+    
+    new_path_abs = root / new_path
+    
+    if not new_path_abs.exists():
+        print(f"cd: {path}: No such file or directory", file=sys.stderr)
+        return 1
+    elif not new_path_abs.is_dir():
+        print(f"cd: {path}: Not a directory", file=sys.stderr)
+        return 1
+    elif not os.access(new_path_abs, os.R_OK):
+        print(f"cd: {path}: Permission denied", file=sys.stderr)
+        return 1
+    
+    resolved_path = str(new_path_abs.resolve())
+    root_resolved = str(root.resolve())
+    
+    if not resolved_path.startswith(root_resolved):
+        print(f"cd: {path}: Access denied (cannot leave MashFS root)", file=sys.stderr)
+        return 1
+    
+    os.environ['MASHFS_CWD'] = str(new_path)
+    print(f"Changed directory to {new_path}")
+    
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main()) 

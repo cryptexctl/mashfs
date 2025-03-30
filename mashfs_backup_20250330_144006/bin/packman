@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+import os
+import sys
+from pathlib import Path
+
+def main():
+    if len(sys.argv) < 2:
+        print("Использование: packman <команда> [параметры]")
+        print("Команды:")
+        print("  add <имя_пакета>      - Добавить и включить пакет")
+        print("  remove <имя_пакета>   - Полностью удалить пакет")
+        print("  install <имя_пакета>  - Установить пакет")
+        print("  enable <имя_пакета>   - Включить пакет")
+        print("  disable <имя_пакета>  - Отключить пакет")
+        print("  list                  - Показать список всех пакетов")
+        print("  info <имя_пакета>     - Информация о пакете")
+        sys.exit(1)
+    
+    root = Path(os.environ.get("MASHFS_ROOT", os.path.abspath('filesfs'))).absolute()
+    sys.path.append(str(root.parent))
+    
+    try:
+        from package_manager import PackageManager
+        
+        pm = PackageManager(root=root)
+        
+        command = sys.argv[1]
+        args = sys.argv[2:]
+        
+        if command == "add" and len(args) >= 1:
+            pm.add(args[0])
+        elif command == "remove" and len(args) >= 1:
+            pm.remove(args[0])
+        elif command == "install" and len(args) >= 1:
+            pm.install(args[0])
+        elif command == "enable" and len(args) >= 1:
+            pm.enable(args[0])
+        elif command == "disable" and len(args) >= 1:
+            pm.disable(args[0])
+        elif command == "list":
+            pm.list_packages()
+        elif command == "info" and len(args) >= 1:
+            pm.show_info(args[0])
+        else:
+            print(f"Неизвестная команда: {command}")
+            sys.exit(1)
+    except ImportError:
+        print("Ошибка: Не удалось импортировать модуль package_manager")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Ошибка: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

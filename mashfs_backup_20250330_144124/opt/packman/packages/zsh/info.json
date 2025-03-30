@@ -1,0 +1,25 @@
+{
+    "name": "zsh",
+    "version": "5.9.0",
+    "description": "Z shell - advanced shell with oh-my-zsh",
+    "author": "MashFS Team",
+    "dependencies": ["oh-my-zsh"],
+    "files": [
+        "bin/zsh",
+        "etc/zshrc",
+        "etc/zprofile",
+        "etc/zshenv",
+        "etc/zlogin",
+        "etc/zlogout"
+    ],
+    "scripts": {
+        "pre_install": "echo 'Installing ZSH...'",
+        "post_install": "echo 'ZSH installed successfully'",
+        "pre_remove": "echo 'Removing ZSH...'",
+        "post_remove": "echo 'ZSH removed successfully'"
+    },
+    "pip_dependencies": [
+        "prompt_toolkit",
+        "pygments"
+    ]
+} 
