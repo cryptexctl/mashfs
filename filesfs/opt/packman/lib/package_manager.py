@@ -13,8 +13,8 @@ import random
 from tqdm import tqdm
 
 class PackageManager:
-    def __init__(self):
-        self.root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
+    def __init__(self, root_dir=None):
+        self.root = root_dir if root_dir else Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
         self.config_dir = self.root / 'opt' / 'packman'
         self.config_file = self.config_dir / 'config.yml'
         self.repos_dir = self.config_dir / 'repos'
@@ -62,18 +62,13 @@ class PackageManager:
                 return repo['packages'][package_name]
         return None
 
-    def _install_pip_dependencies(self, package_name: str) -> None:
-        package_dir = self.packages_dir / package_name
-        deps_file = package_dir / 'pip_dependencies'
-        
-        if deps_file.exists():
-            with open(deps_file) as f:
-                deps = [line.strip() for line in f if line.strip() and not line.startswith('#')]
-                
-            if deps:
-                print(f"Installing Python dependencies for {package_name}...")
-                for dep in deps:
-                    subprocess.run([sys.executable, '-m', 'pip', 'install', dep], check=True)
+    def _install_pip_dependencies(self, package_path):
+        pip_deps_file = package_path / 'pip_dependencies'
+        if pip_deps_file.exists():
+            with open(pip_deps_file) as f:
+                for dep in f.read().splitlines():
+                    if dep.strip():
+                        os.system(f"pip install {dep}")
 
     def _link_binaries(self, package_name: str) -> None:
         package_dir = self.packages_dir / package_name
@@ -136,7 +131,7 @@ class PackageManager:
             else:
                 shutil.copytree(package_dir, enabled_path, dirs_exist_ok=True)
                 
-        self._install_pip_dependencies(package_name)
+        self._install_pip_dependencies(package_dir)
         self._link_binaries(package_name)
         self._run_script(package_name, 'install')
         
@@ -178,7 +173,7 @@ class PackageManager:
         self._simulate_installation(package_name)
         
         shutil.copytree(package_dir, self.cached_dir / package_name, dirs_exist_ok=True)
-        self._install_pip_dependencies(package_name)
+        self._install_pip_dependencies(package_dir)
         self._link_binaries(package_name)
         self._run_script(package_name, 'install')
         
@@ -236,4 +231,96 @@ class PackageManager:
             return 0
         else:
             print(f"Package {package_name} is not disabled or does not exist")
-            return 1 
+            return 1
+
+    def doctor(self, fix=False):
+        print(f"Запуск диагностики пакетов...")
+        issues_found = False
+        packages_to_fix = []
+        
+        enabled_packages = [p.name for p in self.enabled_dir.iterdir() if p.is_dir()]
+        
+        for package_name in enabled_packages:
+            print(f"Проверка пакета: {package_name}")
+            package_path = self.enabled_dir / package_name
+            
+            info_path = package_path / 'info.json'
+            if not info_path.exists():
+                issues_found = True
+                print(f"  ОШИБКА: Файл info.json отсутствует для пакета {package_name}")
+                continue
+                
+            try:
+                with open(info_path) as f:
+                    info = json.load(f)
+            except json.JSONDecodeError:
+                issues_found = True
+                print(f"  ОШИБКА: Файл info.json поврежден для пакета {package_name}")
+                continue
+            
+            missing_deps = []
+            if 'dependencies' in info:
+                for dep in info['dependencies']:
+                    if not (self.enabled_dir / dep).exists():
+                        issues_found = True
+                        missing_deps.append(dep)
+                        print(f"  ОШИБКА: Зависимость '{dep}' отсутствует для пакета {package_name}")
+            
+            pip_deps_file = package_path / 'pip_dependencies'
+            missing_pip_deps = []
+            if pip_deps_file.exists():
+                with open(pip_deps_file) as f:
+                    for dep in f.read().splitlines():
+                        if dep.strip():
+                            try:
+                                __import__(dep.split('==')[0].split('>')[0].split('<')[0].strip())
+                            except ImportError:
+                                issues_found = True
+                                missing_pip_deps.append(dep)
+                                print(f"  ОШИБКА: Python-зависимость '{dep}' отсутствует для пакета {package_name}")
+            
+            bin_dir = package_path / 'bin'
+            if bin_dir.exists():
+                for script in bin_dir.iterdir():
+                    if not os.access(script, os.X_OK) and script.is_file():
+                        issues_found = True
+                        print(f"  ПРЕДУПРЕЖДЕНИЕ: Скрипт '{script.name}' не является исполняемым")
+                        if fix:
+                            os.chmod(script, 0o755)
+                            print(f"  ИСПРАВЛЕНО: Права доступа для '{script.name}' установлены на 755")
+            
+            if missing_deps or missing_pip_deps:
+                packages_to_fix.append({
+                    'name': package_name,
+                    'missing_deps': missing_deps,
+                    'missing_pip_deps': missing_pip_deps
+                })
+        
+        if not issues_found:
+            print("Диагностика завершена. Проблем не обнаружено!")
+            return True
+        
+        if fix and packages_to_fix:
+            print("\nИсправление проблем...")
+            for package_info in packages_to_fix:
+                package_name = package_info['name']
+                print(f"Исправление проблем пакета {package_name}...")
+                
+                for dep in package_info['missing_deps']:
+                    print(f"  Установка зависимости: {dep}")
+                    self.install(dep)
+                
+                for dep in package_info['missing_pip_deps']:
+                    print(f"  Установка Python-зависимости: {dep}")
+                    os.system(f"pip install {dep}")
+                
+                print(f"Исправление пакета {package_name} завершено")
+            
+            print("\nВсе проблемы исправлены!")
+            return True
+        elif fix:
+            print("\nНет проблем, требующих исправления.")
+            return True
+        else:
+            print("\nДиагностика завершена с ошибками. Запустите 'packman doctor --fix' для исправления проблем.")
+            return False 

@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+import os
+import sys
+import json
+import time
+from pathlib import Path
+from datetime import datetime
+
+VERSION = "1.0.0"
+BRANCHES = ["stable", "beta", "dev", "experimental"]
+RELEASES = {
+    "stable": ["1.0.0", "0.9.5", "0.9.0"],
+    "beta": ["1.1.0-beta", "1.0.5-beta"],
+    "dev": ["1.2.0-dev"],
+    "experimental": ["2.0.0-exp"]
+}
+
+def main():
+    root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
+    current_dir = Path(os.environ.get('MASHFS_CWD', root)).absolute()
+    
+    if len(sys.argv) < 2:
+        show_help()
+        return
+    
+    command = sys.argv[1]
+    args = sys.argv[2:]
+    
+    if command == "version":
+        show_version()
+    elif command == "upgrade":
+        upgrade_system(args)
+    elif command == "switch":
+        switch_branch_or_release(args)
+    elif command == "list":
+        list_branches_or_releases(args)
+    elif command == "rollback":
+        rollback_system(args)
+    elif command == "status":
+        show_status()
+    elif command == "help":
+        show_help()
+    else:
+        print(f"Неизвестная команда: {command}")
+        print("Используйте 'mashsys help' для просмотра доступных команд")
+
+def show_version():
+    print(f"MashFS System Manager версия {VERSION}")
+    print(f"Текущая версия системы: {VERSION}")
+    print(f"Текущая ветка: stable")
+
+def upgrade_system(args):
+    force = "--force" in args
+    
+    if force:
+        args = [arg for arg in args if arg != "--force"]
+    
+    target_version = args[0] if args else "latest"
+    
+    if target_version == "latest":
+        print("Поиск последней версии MashFS...")
+        time.sleep(1)
+        print("Найдена версия 1.0.5-beta")
+        target_version = "1.0.5-beta"
+        
+    print(f"Переход на версию {target_version}...")
+    
+    total_steps = 10
+    for i in range(1, total_steps + 1):
+        progress = "=" * i + " " * (total_steps - i)
+        print(f"\r[{progress}] {i*10}%", end="")
+        time.sleep(0.3)
+    print("\nОбновление завершено!")
+    print(f"Система обновлена до версии {target_version}")
+
+def switch_branch_or_release(args):
+    if not args:
+        print("Необходимо указать ветку или версию")
+        print("Использование: mashsys switch <branch/version>")
+        return
+    
+    target = args[0]
+    
+    if target in BRANCHES:
+        print(f"Переключение на ветку '{target}'...")
+        time.sleep(1)
+        latest_in_branch = RELEASES[target][0]
+        print(f"Последняя версия в ветке '{target}': {latest_in_branch}")
+        print(f"Установка версии {latest_in_branch}...")
+        time.sleep(1)
+        print(f"Успешно переключено на ветку '{target}', версия {latest_in_branch}")
+        return
+    
+    for branch, releases in RELEASES.items():
+        if target in releases:
+            print(f"Переключение на версию {target} (ветка '{branch}')...")
+            time.sleep(1)
+            print(f"Успешно переключено на версию {target}")
+            return
+    
+    print(f"Ошибка: Ветка или версия '{target}' не найдена")
+    print("Используйте 'mashsys list' для просмотра доступных веток и версий")
+
+def list_branches_or_releases(args):
+    if not args or args[0] == "branches":
+        print("Доступные ветки:")
+        for branch in BRANCHES:
+            latest = RELEASES[branch][0]
+            print(f"  {branch:12} - последняя версия: {latest}")
+    elif args[0] == "releases":
+        print("Доступные релизы:")
+        for branch in BRANCHES:
+            print(f"[{branch}]")
+            for release in RELEASES[branch]:
+                print(f"  {release}")
+    else:
+        print(f"Неизвестный параметр: {args[0]}")
+        print("Использование: mashsys list [branches|releases]")
+
+def rollback_system(args):
+    if not args:
+        print("Необходимо указать версию для отката")
+        print("Использование: mashsys rollback <version>")
+        return
+    
+    target = args[0]
+    
+    print(f"Откат до версии {target}...")
+    time.sleep(1)
+    
+    total_steps = 5
+    for i in range(1, total_steps + 1):
+        progress = "=" * i + " " * (total_steps - i)
+        print(f"\r[{progress}] {i*20}%", end="")
+        time.sleep(0.3)
+    print("\nОткат завершен!")
+    print(f"Система откатилась до версии {target}")
+
+def show_status():
+    print("Статус системы MashFS:")
+    print(f"  Текущая версия: {VERSION}")
+    print(f"  Текущая ветка: stable")
+    print(f"  Дата установки: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"  Последнее обновление: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"  Доступно обновление: 1.0.5-beta")
+
+def show_help():
+    print("Использование: mashsys <команда> [параметры]")
+    print("\nДоступные команды:")
+    print("  version      - показать текущую версию")
+    print("  upgrade      - обновить систему до последней версии")
+    print("  switch       - переключиться на другую ветку или версию")
+    print("  list         - показать доступные ветки и релизы")
+    print("  rollback     - откатиться к предыдущей версии")
+    print("  status       - показать текущий статус системы")
+    print("  help         - показать эту справку")
+    print("\nПримеры:")
+    print("  mashsys upgrade               - обновить до последней версии")
+    print("  mashsys upgrade 1.0.5-beta    - обновить до указанной версии")
+    print("  mashsys switch beta           - переключиться на ветку beta")
+    print("  mashsys switch 0.9.5          - переключиться на версию 0.9.5")
+    print("  mashsys list branches         - показать доступные ветки")
+    print("  mashsys list releases         - показать доступные релизы")
+    print("  mashsys rollback 0.9.5        - откатиться к версии 0.9.5")
+
+if __name__ == "__main__":
+    main() 

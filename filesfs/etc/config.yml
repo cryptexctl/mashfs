@@ -1,0 +1,28 @@
+system:
+  name: MashFS
+  version: 1.0.0
+  description: Lightweight virtual filesystem for educational purposes
+  
+shell:
+  prompt_style: modern
+  history_size: 1000
+  tab_completion: true
+  
+users:
+  enable_root: true
+  default_user: mash
+  
+packages:
+  repositories:
+    - name: main
+      path: /opt/packman/repos/main
+    - name: community
+      path: /opt/packman/repos/community
+  
+terminal:
+  colors: true
+  animated_progress: true
+  
+security:
+  password_auth: true
+  sudo_timeout: 300 

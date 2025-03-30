@@ -1,34 +1,61 @@
 #!/usr/bin/env python3
 import os
 import sys
+import shutil
 from pathlib import Path
 
-def rm():
-    """Remove file"""
-    if len(sys.argv) < 2:
+def main():
+    root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
+    current_dir = Path(os.environ.get('MASHFS_CWD', 'home/mash'))
+    
+    argc = len(sys.argv)
+    if argc < 2:
         print("rm: missing operand", file=sys.stderr)
         return 1
         
-    filename = sys.argv[1]
-    root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
-    current_dir = Path(os.environ.get('MASHFS_CWD', str(root))).absolute()
-    file_path = current_dir / filename
+    recursive = False
+    force = False
     
-    try:
-        if not str(file_path.resolve()).startswith(str(root)):
-            print(f"rm: access denied: {filename}", file=sys.stderr)
-            return 1
-            
-        if file_path.is_file():
-            file_path.unlink()
-            print(f"Removed: {filename}")
-            return 0
+    args = sys.argv[1:]
+    paths = []
+    
+    for arg in args:
+        if arg.startswith('-'):
+            if 'r' in arg or 'R' in arg:
+                recursive = True
+            if 'f' in arg:
+                force = True
         else:
-            print(f"rm: {filename}: No such file", file=sys.stderr)
-            return 1
-    except Exception as e:
-        print(f"rm: {e}", file=sys.stderr)
+            paths.append(arg)
+            
+    if not paths:
+        print("rm: missing operand", file=sys.stderr)
         return 1
+        
+    for path in paths:
+        if path.startswith('/'):
+            target_path = root / path[1:]
+        else:
+            target_path = root / current_dir / path
+        
+        if not target_path.exists():
+            if not force:
+                print(f"rm: cannot remove '{path}': No such file or directory", file=sys.stderr)
+            continue
+            
+        try:
+            if target_path.is_dir() and not recursive:
+                print(f"rm: cannot remove '{path}': Is a directory", file=sys.stderr)
+                continue
+                
+            if target_path.is_dir() and recursive:
+                shutil.rmtree(target_path)
+            else:
+                target_path.unlink()
+        except Exception as e:
+            print(f"rm: cannot remove '{path}': {e}", file=sys.stderr)
+            
+    return 0
 
 if __name__ == "__main__":
-    sys.exit(rm()) 
+    sys.exit(main()) 

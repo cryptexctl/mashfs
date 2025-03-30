@@ -1,191 +1,135 @@
 #!/usr/bin/env python3
 import os
 import sys
+import json
 import random
-import time
 from pathlib import Path
-from rich.console import Console
-from rich.panel import Panel
-from rich.live import Live
-from rich.spinner import Spinner
-from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
-from rich.text import Text
-from rich.layout import Layout
-from rich.align import Align
-from rich.style import Style
-from rich.color import Color
-from pyfiglet import Figlet
-import colorama
-from colorama import Fore, Back, Style as ColoramaStyle
 
-colorama.init()
-console = Console()
+THEMES = {
+    "cyberpunk": {
+        "prompt": "\x1b[1;38;5;207m%s\x1b[0m@\x1b[1;38;5;39m%s\x1b[0m:\x1b[1;38;5;226m%s\x1b[0m$ ",
+        "error": "\x1b[1;38;5;196m%s\x1b[0m",
+        "success": "\x1b[1;38;5;46m%s\x1b[0m",
+        "info": "\x1b[1;38;5;81m%s\x1b[0m",
+        "warning": "\x1b[1;38;5;220m%s\x1b[0m"
+    },
+    "neon": {
+        "prompt": "\x1b[1;38;5;46m%s\x1b[0m@\x1b[1;38;5;201m%s\x1b[0m:\x1b[1;38;5;51m%s\x1b[0m$ ",
+        "error": "\x1b[1;38;5;196m%s\x1b[0m",
+        "success": "\x1b[1;38;5;118m%s\x1b[0m",
+        "info": "\x1b[1;38;5;87m%s\x1b[0m",
+        "warning": "\x1b[1;38;5;214m%s\x1b[0m"
+    },
+    "retro": {
+        "prompt": "\x1b[1;33m%s\x1b[0m@\x1b[1;32m%s\x1b[0m:\x1b[1;36m%s\x1b[0m$ ",
+        "error": "\x1b[1;31m%s\x1b[0m",
+        "success": "\x1b[1;32m%s\x1b[0m",
+        "info": "\x1b[1;36m%s\x1b[0m",
+        "warning": "\x1b[1;33m%s\x1b[0m"
+    },
+    "minimal": {
+        "prompt": "\x1b[1;37m%s\x1b[0m@\x1b[1;37m%s\x1b[0m:\x1b[1;37m%s\x1b[0m$ ",
+        "error": "\x1b[1;37m%s\x1b[0m",
+        "success": "\x1b[1;37m%s\x1b[0m",
+        "info": "\x1b[1;37m%s\x1b[0m",
+        "warning": "\x1b[1;37m%s\x1b[0m"
+    },
+    "midnight": {
+        "prompt": "\x1b[1;38;5;27m%s\x1b[0m@\x1b[1;38;5;20m%s\x1b[0m:\x1b[1;38;5;69m%s\x1b[0m$ ",
+        "error": "\x1b[1;38;5;160m%s\x1b[0m",
+        "success": "\x1b[1;38;5;77m%s\x1b[0m",
+        "info": "\x1b[1;38;5;75m%s\x1b[0m",
+        "warning": "\x1b[1;38;5;178m%s\x1b[0m"
+    }
+}
 
-class OhMyMash:
-    def __init__(self):
-        self.root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
-        self.themes_dir = self.root / 'opt' / 'packman' / 'packages' / 'oh_my_mash' / 'themes'
-        self.current_theme = self._load_current_theme()
-        
-    def _load_current_theme(self):
-        theme_file = self.root / 'etc' / 'omm' / 'current_theme'
-        if theme_file.exists():
-            return theme_file.read_text().strip()
-        return 'cyberpunk'
-        
-    def _save_current_theme(self, theme_name):
-        theme_file = self.root / 'etc' / 'omm' / 'current_theme'
-        theme_file.parent.mkdir(parents=True, exist_ok=True)
-        theme_file.write_text(theme_name)
-        
-    def _get_theme_colors(self, theme_name):
-        theme_file = self.themes_dir / f"{theme_name}.theme"
-        if not theme_file.exists():
-            return None
-            
-        colors = {}
-        with open(theme_file) as f:
-            for line in f:
-                if '=' in line:
-                    key, value = line.strip().split('=')
-                    colors[key.strip()] = value.strip()
-        return colors
-        
-    def _generate_ascii_art(self, text):
-        f = Figlet(font='slant')
-        return f.renderText(text)
-        
-    def _animate_text(self, text, color, delay=0.1):
-        for char in text:
-            console.print(f"[{color}]{char}[/{color}]", end='')
-            time.sleep(delay)
-        console.print()
-        
-    def _show_welcome(self):
-        console.clear()
-        console.print("\n")
-        
-        ascii_art = self._generate_ascii_art("MASH")
-        console.print(Panel(ascii_art, style="bold magenta"))
-        
-        welcome_text = "Welcome to Oh My Mash! 🚀"
-        self._animate_text(welcome_text, "cyan")
-        
-        console.print("\n")
-        
-    def _show_theme_preview(self, theme_name):
-        colors = self._get_theme_colors(theme_name)
-        if not colors:
+def load_theme_colors(theme_name):
+    if theme_name in THEMES:
+        return THEMES[theme_name]
+    else:
+        return THEMES["retro"]
+
+def show_welcome_message():
+    quotes = [
+        "Oh My Mash - Сделайте вашу оболочку красивой!",
+        "Жизнь слишком коротка для скучного терминала!",
+        "Стиль - это способ сказать, кто вы есть, не произнося ни слова.",
+        "Великолепный интерфейс делает работу приятнее.",
+        "В мире полном терминалов, будь тем, кто выделяется."
+    ]
+    
+    print(f"\n\x1b[1;38;5;208m{random.choice(quotes)}\x1b[0m\n")
+
+def apply_theme(theme_name):
+    root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
+    themes_dir = root / 'opt' / 'packman' / 'packages' / 'oh_my_mash' / 'themes'
+    themes_dir.mkdir(exist_ok=True, parents=True)
+    
+    if theme_name not in THEMES:
+        print(f"Тема '{theme_name}' не найдена")
+        return False
+    
+    theme_file = themes_dir / f"{theme_name}.theme"
+    with open(theme_file, 'w') as f:
+        json.dump(THEMES[theme_name], f, indent=2)
+    
+    active_theme = themes_dir / "active.theme"
+    if active_theme.exists():
+        active_theme.unlink()
+    
+    with open(root / 'etc' / 'theme.yml', 'w') as f:
+        f.write(f"name: {theme_name}\n")
+        f.write(f"description: Oh My Mash {theme_name} theme\n")
+        f.write("colors:\n")
+        for key, value in THEMES[theme_name].items():
+            yaml_value = value.replace('\x1b', '\\033')
+            f.write(f"  {key}: \"{yaml_value}\"\n")
+    
+    print(f"Тема '{theme_name}' успешно применена!")
+    return True
+
+def list_themes():
+    print("Доступные темы:")
+    for theme in THEMES.keys():
+        print(f"  - {theme}")
+
+def show_help():
+    print("Oh My Mash - Менеджер тем для MashFS")
+    print("\nИспользование: omm <команда> [параметры]")
+    print("\nДоступные команды:")
+    print("  load <theme>  - Загрузить и применить тему")
+    print("  list          - Показать список доступных тем")
+    print("  help          - Показать эту справку")
+    print("\nПримеры:")
+    print("  omm load cyberpunk  - Применить тему Cyberpunk")
+    print("  omm list            - Показать все доступные темы")
+
+def main():
+    if len(sys.argv) < 2:
+        show_welcome_message()
+        list_themes()
+        return
+    
+    command = sys.argv[1]
+    
+    if command == "load":
+        if len(sys.argv) < 3:
+            print("Необходимо указать имя темы")
+            print("Использование: omm load <theme>")
             return
-            
-        preview = Panel(
-            f"[{colors['prompt']}]user@mash[/{colors['prompt']}] "
-            f"[{colors['path']}]~/projects[/{colors['path']}] "
-            f"[{colors['git']}]git:(main)[/{colors['git']}] "
-            f"[{colors['success']}]✓[/{colors['success']}]",
-            title=f"Theme: {theme_name}",
-            border_style=colors['border']
-        )
-        console.print(preview)
         
-    def _show_loading_animation(self):
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-            console=console
-        ) as progress:
-            task = progress.add_task("Loading theme...", total=100)
-            for i in range(100):
-                time.sleep(0.02)
-                progress.update(task, advance=1)
-                
-    def _apply_theme(self, theme_name):
-        colors = self._get_theme_colors(theme_name)
-        if not colors:
-            console.print(f"[red]Theme {theme_name} not found[/red]")
-            return False
-            
-        self._show_loading_animation()
-        self._save_current_theme(theme_name)
-        
-        # Здесь будет код для применения темы к shell
-        console.print(f"[green]Theme {theme_name} applied successfully![/green]")
-        return True
-        
-    def _list_themes(self):
-        themes = []
-        for theme_file in self.themes_dir.glob("*.theme"):
-            themes.append(theme_file.stem)
-            
-        table = Table(show_header=True, header_style="bold magenta")
-        table.add_column("Theme")
-        table.add_column("Status")
-        
-        for theme in themes:
-            status = "[green]Active[/green]" if theme == self.current_theme else "[dim]Inactive[/dim]"
-            table.add_row(theme, status)
-            
-        console.print(table)
-        
-    def _show_help(self):
-        help_text = """
-[bold cyan]Oh My Mash Commands[/bold cyan]
-
-  [bold]omm theme <name>[/bold]    - Apply a theme
-  [bold]omm list[/bold]           - List available themes
-  [bold]omm preview <name>[/bold] - Preview a theme
-  [bold]omm update[/bold]         - Update Oh My Mash
-  [bold]omm help[/bold]           - Show this help message
-"""
-        console.print(Panel(help_text, title="Oh My Mash Help", border_style="cyan"))
-        
-    def run(self):
-        if len(sys.argv) < 2:
-            self._show_welcome()
-            self._show_help()
-            return 0
-            
-        command = sys.argv[1]
-        
-        if command == 'theme':
-            if len(sys.argv) < 3:
-                console.print("[red]Theme name required[/red]")
-                return 1
-            theme_name = sys.argv[2]
-            return 0 if self._apply_theme(theme_name) else 1
-        elif command == 'list':
-            self._list_themes()
-            return 0
-        elif command == 'preview':
-            if len(sys.argv) < 3:
-                console.print("[red]Theme name required[/red]")
-                return 1
-            theme_name = sys.argv[2]
-            self._show_theme_preview(theme_name)
-            return 0
-        elif command == 'update':
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-                console=console
-            ) as progress:
-                task = progress.add_task("Updating Oh My Mash...", total=100)
-                for i in range(100):
-                    time.sleep(0.02)
-                    progress.update(task, advance=1)
-            console.print("[green]Oh My Mash updated successfully![/green]")
-            return 0
-        elif command == 'help':
-            self._show_help()
-            return 0
-        else:
-            console.print(f"[red]Unknown command: {command}[/red]")
-            return 1
+        theme_name = sys.argv[2]
+        apply_theme(theme_name)
+    
+    elif command == "list":
+        list_themes()
+    
+    elif command == "help":
+        show_help()
+    
+    else:
+        print(f"Неизвестная команда: {command}")
+        print("Используйте 'omm help' для просмотра доступных команд")
 
 if __name__ == "__main__":
-    omm = OhMyMash()
-    sys.exit(omm.run()) 
+    main() 
