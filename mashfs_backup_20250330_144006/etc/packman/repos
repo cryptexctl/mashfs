@@ -1,4 +1,0 @@
-# Packman Repositories
-# Format: name|url|enabled|priority
-
-core|file:///opt/packman/packages|1|1 

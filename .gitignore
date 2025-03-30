@@ -1,3 +1,4 @@
 .DS*
 filesfs/opt/packman/cached/
 */.DS*
+*mashfs_backup_*
