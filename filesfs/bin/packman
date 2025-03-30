@@ -17,12 +17,15 @@ def main():
         sys.exit(1)
     
     root = Path(os.environ.get("MASHFS_ROOT", os.path.abspath('filesfs'))).absolute()
-    sys.path.append(str(root.parent))
+    
+    # Добавляем путь к библиотеке package_manager
+    lib_path = root / 'opt' / 'packman' / 'lib'
+    sys.path.append(str(lib_path))
     
     try:
         from package_manager import PackageManager
         
-        pm = PackageManager(root=root)
+        pm = PackageManager(root_dir=root)
         
         command = sys.argv[1]
         args = sys.argv[2:]
@@ -44,8 +47,9 @@ def main():
         else:
             print(f"Неизвестная команда: {command}")
             sys.exit(1)
-    except ImportError:
-        print("Ошибка: Не удалось импортировать модуль package_manager")
+    except ImportError as e:
+        print(f"Ошибка: Не удалось импортировать модуль package_manager: {e}")
+        print(f"Пути импорта: {sys.path}")
         sys.exit(1)
     except Exception as e:
         print(f"Ошибка: {e}")

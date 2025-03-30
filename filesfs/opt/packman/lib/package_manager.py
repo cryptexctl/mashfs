@@ -14,7 +14,13 @@ from tqdm import tqdm
 
 class PackageManager:
     def __init__(self, root_dir=None):
-        self.root = root_dir if root_dir else Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
+        if root_dir is None:
+            self.root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
+        elif isinstance(root_dir, str):
+            self.root = Path(root_dir).absolute()
+        else:
+            self.root = root_dir
+            
         self.config_dir = self.root / 'opt' / 'packman'
         self.config_file = self.config_dir / 'config.yml'
         self.repos_dir = self.config_dir / 'repos'
@@ -49,17 +55,19 @@ class PackageManager:
                     repos[repo_file.stem] = yaml.safe_load(f)
         return repos
 
-    def _get_package_info(self, package_name: str) -> Optional[Dict]:
-        package_dir = self.packages_dir / package_name
-        info_file = package_dir / 'info.json'
-        
-        if info_file.exists():
-            with open(info_file) as f:
-                return json.load(f)
+    def _get_package_info(self, package_name: str) -> dict:
+        pkg_info_path = self.packages_dir / package_name / 'package.yml'
+        if pkg_info_path.exists():
+            try:
+                with open(pkg_info_path, 'r') as f:
+                    return yaml.safe_load(f)
+            except Exception as e:
+                print(f"Ошибка чтения информации о пакете {package_name}: {e}")
                 
         for repo_name, repo in self.repos.items():
             if package_name in repo.get('packages', {}):
                 return repo['packages'][package_name]
+                
         return None
 
     def _install_pip_dependencies(self, package_path):
@@ -70,19 +78,50 @@ class PackageManager:
                     if dep.strip():
                         os.system(f"pip install {dep}")
 
-    def _link_binaries(self, package_name: str) -> None:
+    def _link_binaries(self, package_name: str):
+        print(f"Linking binaries for package {package_name}")
         package_dir = self.packages_dir / package_name
         bin_dir = package_dir / 'bin'
         
+        if not (package_dir.exists() and package_dir.is_dir()):
+            print(f"Warning: Package directory {package_dir} not found")
+            
         if bin_dir.exists() and bin_dir.is_dir():
-            for bin_file in bin_dir.iterdir():
-                if bin_file.is_file():
-                    target_path = self.bin_dir / bin_file.name
-                    if target_path.exists():
-                        target_path.unlink()
-                    target_path.symlink_to(bin_file)
-                    os.chmod(bin_file, 0o755)  # Make executable
-                    print(f"Linked binary: {bin_file.name}")
+            print(f"Found bin directory at {bin_dir}")
+            for binary in bin_dir.iterdir():
+                if binary.is_file():
+                    print(f"Processing binary: {binary}")
+                    if not os.access(binary, os.X_OK):
+                        print(f"Making {binary} executable")
+                        os.chmod(binary, 0o755)
+                        
+                    link_path = self.bin_dir / binary.name
+                    if link_path.exists() or link_path.is_symlink():
+                        print(f"Removing existing link {link_path}")
+                        os.unlink(link_path)
+                        
+                    print(f"Creating symlink: {link_path} -> {binary}")
+                    os.symlink(binary, link_path)
+        else:
+            print(f"No bin directory found at {bin_dir}")
+            
+        enabled_bin_dir = self.enabled_dir / package_name / 'bin'
+        if enabled_bin_dir.exists() and enabled_bin_dir.is_dir() and enabled_bin_dir != bin_dir:
+            print(f"Found enabled bin directory at {enabled_bin_dir}")
+            for binary in enabled_bin_dir.iterdir():
+                if binary.is_file():
+                    print(f"Processing enabled binary: {binary}")
+                    if not os.access(binary, os.X_OK):
+                        print(f"Making {binary} executable")
+                        os.chmod(binary, 0o755)
+                        
+                    link_path = self.bin_dir / binary.name
+                    if link_path.exists() or link_path.is_symlink():
+                        print(f"Removing existing link {link_path}")
+                        os.unlink(link_path)
+                        
+                    print(f"Creating symlink: {link_path} -> {binary}")
+                    os.symlink(binary, link_path)
 
     def _run_script(self, package_name: str, script_type: str) -> None:
         package_dir = self.packages_dir / package_name
@@ -172,7 +211,15 @@ class PackageManager:
             
         self._simulate_installation(package_name)
         
+        # Копируем в cached
         shutil.copytree(package_dir, self.cached_dir / package_name, dirs_exist_ok=True)
+        
+        # Копируем в enabled, чтобы активировать пакет
+        enabled_path = self.enabled_dir / package_name
+        if enabled_path.exists():
+            shutil.rmtree(enabled_path)
+        shutil.copytree(package_dir, enabled_path)
+        
         self._install_pip_dependencies(package_dir)
         self._link_binaries(package_name)
         self._run_script(package_name, 'install')
@@ -232,6 +279,65 @@ class PackageManager:
         else:
             print(f"Package {package_name} is not disabled or does not exist")
             return 1
+
+    def list_packages(self) -> int:
+        print("Доступные пакеты:")
+        
+        all_packages = set()
+        
+        # Пакеты из репозиториев
+        for repo_name, repo in self.repos.items():
+            for pkg_name in repo.get('packages', {}):
+                all_packages.add(pkg_name)
+                
+        # Локальные пакеты
+        for pkg_dir in self.packages_dir.glob('*'):
+            if pkg_dir.is_dir():
+                all_packages.add(pkg_dir.name)
+                
+        # Проверяем статус пакетов
+        for pkg_name in sorted(all_packages):
+            status = []
+            if (self.enabled_dir / pkg_name).exists():
+                status.append("\033[32mенаблд\033[0m")
+            elif (self.disabled_dir / pkg_name).exists():
+                status.append("\033[31mдисейблд\033[0m")
+            else:
+                status.append("\033[33mне установлен\033[0m")
+                
+            # Получаем описание пакета
+            info = self._get_package_info(pkg_name)
+            desc = info.get('description', 'Нет описания') if info else 'Нет описания'
+            
+            print(f"  {pkg_name:15} - {desc} [{', '.join(status)}]")
+            
+        return 0
+        
+    def show_info(self, package_name: str) -> int:
+        info = self._get_package_info(package_name)
+        if not info:
+            print(f"Пакет {package_name} не найден")
+            return 1
+            
+        print(f"Информация о пакете: {package_name}")
+        print(f"  Описание: {info.get('description', 'Нет описания')}")
+        print(f"  Версия: {info.get('version', 'Не указана')}")
+        print(f"  Автор: {info.get('author', 'Не указан')}")
+        
+        if 'dependencies' in info and info['dependencies']:
+            print("  Зависимости:")
+            for dep in info['dependencies']:
+                print(f"    - {dep}")
+                
+        # Проверяем статус пакета
+        if (self.enabled_dir / package_name).exists():
+            print("  Статус: \033[32mВключен\033[0m")
+        elif (self.disabled_dir / package_name).exists():
+            print("  Статус: \033[31mОтключен\033[0m")
+        else:
+            print("  Статус: \033[33mНе установлен\033[0m")
+            
+        return 0
 
     def doctor(self, fix=False):
         print(f"Запуск диагностики пакетов...")
