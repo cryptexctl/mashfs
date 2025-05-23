@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+import os
+import sys
+from pathlib import Path
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
+
+console = Console()
+
+def main():
+    if len(sys.argv) < 2:
+        print(os.environ.get('MASHFS_CWD', 'filesfs'))
+        return
+        
+    root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
+    current_dir = Path(os.environ.get('MASHFS_CWD', str(root))).absolute()
+    target = sys.argv[1]
+    
+    if target.startswith('/'):
+        new_path = root / target[1:]
+    else:
+        new_path = current_dir / target
+        
+    try:
+        new_path = new_path.resolve()
+        if not str(new_path).startswith(str(root)):
+            print(f"cd: access denied: {target}")
+            return
+            
+        if not new_path.is_dir():
+            print(f"cd: not a directory: {target}")
+            return
+            
+        os.environ['MASHFS_CWD'] = str(new_path)
+        print(str(new_path.relative_to(root)))
+    except Exception as e:
+        print(f"cd: {e}")
+
+if __name__ == "__main__":
+    main() 

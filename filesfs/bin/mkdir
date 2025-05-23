@@ -9,15 +9,22 @@ def main():
         sys.exit(1)
         
     root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
-    current_dir = Path(os.environ.get('MASHFS_CWD', str(root))).absolute()
-    dir_path = current_dir / sys.argv[1]
+    current_dir = os.environ.get('MASHFS_CWD', '')
     
-    if not str(dir_path.resolve()).startswith(str(root)):
-        print(f"mkdir: access denied: {sys.argv[1]}")
-        sys.exit(1)
-        
+    dir_arg = sys.argv[1]
+    
+    if dir_arg.startswith('/'):
+        dir_path = root / dir_arg.lstrip('/')
+    else:
+        dir_path = root / current_dir / dir_arg
+    
     try:
-        dir_path.mkdir(parents=True, exist_ok=True)
+        real_path = dir_path.resolve()
+        if not str(real_path).startswith(str(root)):
+            print(f"mkdir: access denied: {sys.argv[1]}")
+            sys.exit(1)
+            
+        real_path.mkdir(parents=True, exist_ok=True)
     except Exception as e:
         print(f"mkdir: {e}")
         sys.exit(1)

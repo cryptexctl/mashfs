@@ -1,13 +1,1 @@
-#!/usr/bin/env python3
-import os
-import sys
-import platform
-
-def main():
-    if len(sys.argv) > 1 and sys.argv[1] == '-a':
-        print(f"HardMash {platform.release()} {platform.machine()}")
-    else:
-        print("HardMash")
-
-if __name__ == "__main__":
-    main() 
+/Users/platon/Desktop/work/mashfs/filesfs/opt/packman/enabled/core-utils/bin/uname

@@ -1,0 +1,32 @@
+{
+    "name": "core-utils",
+    "version": "1.0.0",
+    "description": "Core utilities for MashFS",
+    "author": "MashFS Team",
+    "dependencies": [],
+    "files": [
+        "bin/cd",
+        "bin/ls",
+        "bin/pwd",
+        "bin/nano",
+        "bin/cat",
+        "bin/mkdir",
+        "bin/rm",
+        "bin/rmdir",
+        "bin/uname",
+        "bin/clear",
+        "bin/echo",
+        "bin/date",
+        "bin/whoami",
+        "bin/hostname"
+    ],
+    "scripts": {
+        "pre_install": "echo 'Installing core utilities...'",
+        "post_install": "echo 'Core utilities installed successfully'"
+    },
+    "pip_dependencies": [
+        "colorama",
+        "tqdm",
+        "rich"
+    ]
+} 

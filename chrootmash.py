@@ -621,10 +621,13 @@ class MashShell:
             env['USER'] = self.user
             
             # Создаем строку команды
-            cmd_str = f"{sys.executable} {cmd_path} {' '.join(args)}"
+            cmd_list = [sys.executable, str(cmd_path)] + args
             
-            # Запускаем команду
-            os.system(cmd_str)
+            # Запускаем команду с обновленной средой окружения
+            try:
+                subprocess.run(cmd_list, env=env)
+            except Exception as e:
+                print(self.error(f"Command failed: {e}"))
         else:
             print(self.error(f"Command not found: {cmd}"))
             
