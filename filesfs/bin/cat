@@ -9,19 +9,26 @@ def main():
         sys.exit(1)
         
     root = Path(os.environ.get('MASHFS_ROOT', 'filesfs')).absolute()
-    current_dir = Path(os.environ.get('MASHFS_CWD', str(root))).absolute()
-    file_path = current_dir / sys.argv[1]
+    current_dir = os.environ.get('MASHFS_CWD', '')
     
-    if not str(file_path.resolve()).startswith(str(root)):
-        print(f"cat: access denied: {sys.argv[1]}")
-        sys.exit(1)
-        
-    if not file_path.exists():
-        print(f"cat: {sys.argv[1]}: No such file or directory")
-        sys.exit(1)
-        
+    file_arg = sys.argv[1]
+    
+    if file_arg.startswith('/'):
+        file_path = root / file_arg.lstrip('/')
+    else:
+        file_path = root / current_dir / file_arg
+    
     try:
-        with open(file_path) as f:
+        real_path = file_path.resolve()
+        if not str(real_path).startswith(str(root)):
+            print(f"cat: access denied: {sys.argv[1]}")
+            sys.exit(1)
+            
+        if not real_path.exists():
+            print(f"cat: {sys.argv[1]}: No such file or directory")
+            sys.exit(1)
+            
+        with open(real_path) as f:
             print(f.read(), end='')
     except Exception as e:
         print(f"cat: {e}")
